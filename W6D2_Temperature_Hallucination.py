@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from pathlib import Path
 
 from groq import Groq
 
@@ -8,17 +7,14 @@ from groq import Groq
 API_KEY = os.getenv("GROQ_API_KEY")
 if not API_KEY:
     raise RuntimeError(
-        "GROQ_API_KEY مش موجود. حطي مفتاح الـAPI كـenvironment variable "
-        "ومتكتبيهوش جوه الملف."
+        "GROQ_API_KEY مش موجود. حطيه كـenvironment variable ومتكتبيهوش في الكود."
     )
 
 MODEL = "llama-3.1-8b-instant"
-NOTES_FILE = Path("notes.md")
-
 client = Groq(api_key=API_KEY)
 
 
-def ask(question, system_prompt="جاوب بشكل مباشر. لو مش متأكد من معلومة، قول إنك مش متأكد بدل ما تخمن.", temperature=0.2):
+def ask(question, system_prompt="جاوب بشكل مباشر. لو مش متأكد قول مش متأكد بدل ما تخمن.", temperature=0.2):
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
@@ -28,82 +24,154 @@ def ask(question, system_prompt="جاوب بشكل مباشر. لو مش متأ�
         temperature=temperature,
     )
 
-    answer = response.choices[0].message.content
-    usage = response.usage
-    return answer, usage
+    return response.choices[0].message.content, response.usage
 
 
-def run_temperature_test():
+def save_notes(temperature_results, hallucination_results, mitigation):
+    with open("notes.md", "a", encoding="utf-8") as file:
+        file.write("\n\n---\n\n")
+        file.write("# W6D2 — Temperature و Hallucination\n\n")
+        file.write(
+            f"وقت تشغيل التجربة: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+        )
+
+        file.write("## 1. تجربة الـTemperature\n\n")
+        file.write(
+            "استخدمت نفس النص ونفس طلب التلخيص 3 مرات عند 0.1 و3 مرات عند 0.9. "
+            "الهدف أشوف هل زيادة الـTemperature بتغير الصياغة والتفاصيل ولا لأ.\n\n"
+        )
+        file.write("| الحرارة | التجربة | الرد | عدد الـTokens |\n")
+        file.write("|---:|---:|---|---:|\n")
+
+        for item in temperature_results:
+            answer = item["answer"].replace("\n", " ").replace("|", "\\|")
+            file.write(
+                f"| {item['temperature']} | {item['run']} | "
+                f"{answer} | {item['tokens']} |\n"
+            )
+
+        file.write("\n### ملاحظتي\n\n")
+        file.write(
+            "بعد التشغيل أقارن الردود الستة. لو 0.1 و0.9 طلعوا شبه بعض جداً، "
+            "يبقى أجرب موديل تاني بدل ما أفترض إن التجربة فشلت.\n\n"
+        )
+
+        file.write("## 2. اختبار الـHallucination\n\n")
+        file.write("| النوع | السؤال | الرد | هل هلوس؟ | إزاي اكتشفت؟ |\n")
+        file.write("|---|---|---|---|---|\n")
+
+        for item in hallucination_results:
+            answer = item["answer"].replace("\n", " ").replace("|", "\\|")
+            file.write(
+                f"| {item['type']} | {item['question']} | {answer} | "
+                "[يتحدد بعد التحقق] | "
+                f"{item['verification']} |\n"
+            )
+
+        file.write(
+            "\nلو الموديل قال «معرفش» أو «مش موجود»، دي نتيجة مهمة مش فشل؛ "
+            "لأن الاعتراف بعدم المعرفة أحسن من اختراع إجابة.\n\n"
+        )
+
+        file.write("## 3. تجربة تقليل الهلوسة\n\n")
+        file.write(f"**السؤال:** {mitigation['question']}\n\n")
+        file.write(f"**قبل تعديل الـPrompt:**\n{mitigation['before']}\n\n")
+        file.write(f"**بعد تعديل الـPrompt:**\n{mitigation['after']}\n\n")
+        file.write(
+            "الفكرة إننا نطلب من الموديل بوضوح إنه يعترف بعدم اليقين، "
+            "ونديه سياق يمنعه من اختراع معلومات. ده ممكن يقلل الهلوسة "
+            "لكن مش بيلغيها.\n\n"
+        )
+
+        file.write("## 4. هل نقدر نلغي الهلوسة نهائياً؟\n\n")
+        file.write(
+            "لا. نقدر نقللها ونكشفها، لكن مينفعش أبني نظام حقيقي على افتراض "
+            "إن الموديل عمره ما هيغلط. عملياً هستخدم مصادر موثوقة للحاجات "
+            "اللي محتاجة حقائق محددة، وأخلي الموديل يقول مش متأكد بدل التخمين، "
+            "وأعمل تحقق مستقل للمعلومات المهمة، خصوصاً المعلومات الحديثة. "
+            "الثقة في طريقة كلام الموديل مش دليل على صحة المعلومة.\n"
+        )
+
+
+def main():
+    # =========================
+    # 1) Temperature experiment
+    # =========================
     text_to_summarize = """
     الشبكات بتسمح لأجهزة مختلفة إنها تتواصل مع بعض وتبادل البيانات.
-    الراوتر بيوجه البيانات بين الشبكات، والسويتش بيربط الأجهزة داخل نفس الشبكة
-    المحلية. عنوان IP بيساعد في تحديد الجهاز أو الواجهة على الشبكة، بينما
-    البروتوكولات بتحدد القواعد اللي الأجهزة بتستخدمها في الاتصال. في الإنترنت،
-    البيانات غالباً بتتقسم لحزم صغيرة، وكل حزمة ممكن تمشي في طريق مختلف قبل ما
-    توصل للوجهة. بروتوكول TCP بيركز على وصول البيانات بشكل موثوق وترتيبها،
-    بينما UDP أبسط وأسرع في حالات معينة ومش بيضمن نفس مستوى الاعتمادية. فهم
-    الشبكات مهم في البرمجة والأمن السيبراني لأن أغلب الأنظمة الحديثة بتعتمد
-    على الاتصال بين أجهزة وخدمات متعددة.
+    الراوتر بيوجه البيانات بين الشبكات، والسويتش بيربط الأجهزة داخل نفس
+    الشبكة المحلية. عنوان IP بيساعد في تحديد الجهاز أو الواجهة على الشبكة،
+    والبروتوكولات بتحط القواعد اللي الأجهزة بتستخدمها في الاتصال. البيانات
+    على الإنترنت غالباً بتتقسم لحزم صغيرة، وكل حزمة ممكن تمشي في طريق مختلف
+    قبل ما توصل للوجهة. TCP بيركز على وصول البيانات بشكل موثوق وترتيبها،
+    بينما UDP أبسط وممكن يكون أسرع في حالات معينة لكنه مش بيضمن نفس مستوى
+    الاعتمادية. فهم الشبكات مهم في البرمجة والأمن السيبراني لأن أغلب الأنظمة
+    الحديثة بتعتمد على الاتصال بين أجهزة وخدمات متعددة.
     """
 
-    prompt = (
+    summary_prompt = (
         "لخص النص الجاي في 150 كلمة أو أكتر. حافظ على المعنى الأساسي "
         "ومتضيفش معلومات من عندك.\n\n" + text_to_summarize
     )
 
-    rows = []
+    temperature_results = []
 
     for temperature in (0.1, 0.9):
-        for run_number in range(1, 4):
-            answer, usage = ask(prompt, temperature=temperature)
-            rows.append(
+        for run in range(1, 4):
+            answer, usage = ask(
+                summary_prompt,
+                temperature=temperature,
+            )
+
+            temperature_results.append(
                 {
                     "temperature": temperature,
-                    "run": run_number,
+                    "run": run,
                     "answer": answer,
                     "tokens": usage.total_tokens,
                 }
             )
 
-    return rows
-
-
-def run_hallucination_test():
+    # =========================
+    # 2) Hallucination experiment
+    # =========================
     questions = [
         {
-            "type": "معلومة قابلة للتحقق",
+            "type": "معلومة حقيقية",
             "question": "ما هي عاصمة أستراليا؟",
-            "verification": "التحقق: كانبيرا هي العاصمة الرسمية لأستراليا.",
+            "verification": "أراجع مصدر موثوق عن عاصمة أستراليا.",
         },
         {
-            "type": "معلومة قابلة للتحقق",
+            "type": "معلومة حقيقية",
             "question": "مين كتب رواية Pride and Prejudice؟",
-            "verification": "التحقق: الرواية من تأليف جين أوستن.",
+            "verification": "أراجع مصدر موثوق عن مؤلف الرواية.",
         },
         {
-            "type": "حاجة مش موجودة",
+            "type": "حاجة مخترعة",
             "question": "مين مؤلف كتاب The Glass Orchard of Novera الصادر سنة 2019؟",
-            "verification": "السؤال مبني على كتاب مخترع، فالإجابة الصحيحة المفروض تكون عدم وجود مصدر موثوق يؤكده.",
+            "verification": "أتحقق أولاً إن الكتاب موجود فعلاً ومن مصدر مستقل.",
         },
         {
-            "type": "حاجة مش موجودة",
-            "question": "إيه أهم خصائص مكتبة Python اسمها quantumpicklex، وإمتى اتعمل أول إصدار مستقر ليها؟",
-            "verification": "الاسم مستخدم هنا كاختبار لحاجة مخترعة؛ لازم نتحقق من وجود مكتبة حقيقية قبل تصديق أي تفاصيل.",
+            "type": "حاجة مخترعة",
+            "question": "إيه أهم خصائص مكتبة Python اسمها quantumpicklex وإمتى نزل أول إصدار مستقر ليها؟",
+            "verification": "أتحقق من وجود المكتبة من مصدر رسمي أو مستودع معروف.",
         },
         {
             "type": "حدث حديث جداً",
             "question": (
-                f"إيه أهم حدث حصل النهارده {datetime.now().strftime('%Y-%m-%d')}؟ "
-                "جاوب من غير استخدام أدوات بحث، ولو مش عندك معلومة موثوقة قول مش متأكد."
+                "إيه أهم حدث حصل النهارده؟ لو معندكش معلومات حديثة وموثوقة "
+                "قول مش متأكد بدل ما تخمن."
             ),
-            "verification": "الحدث الحديث جداً لازم يتراجع من مصدر أخبار موثوق بتاريخ واضح؛ ماينفعش نعتبر ثقة النموذج دليل على صحة الإجابة.",
+            "verification": "أقارن الإجابة بمصدر أخبار موثوق بتاريخ واضح.",
         },
     ]
 
-    results = []
+    hallucination_results = []
+
     for item in questions:
         answer, usage = ask(item["question"], temperature=0.2)
-        results.append(
+
+        hallucination_results.append(
             {
                 **item,
                 "answer": answer,
@@ -111,111 +179,44 @@ def run_hallucination_test():
             }
         )
 
-    return results
+    # =========================
+    # 3) Hallucination reduction
+    # =========================
+    mitigation_question = (
+        "مين مؤلف كتاب The Glass Orchard of Novera الصادر سنة 2019؟"
+    )
 
-
-def run_hallucination_reduction_test():
-    question = "مين مؤلف كتاب The Glass Orchard of Novera الصادر سنة 2019؟"
-
-    before, before_usage = ask(
-        question,
+    before, _ = ask(
+        mitigation_question,
         system_prompt="جاوب على السؤال بشكل مباشر.",
         temperature=0.7,
     )
 
-    after, after_usage = ask(
-        question,
+    after, _ = ask(
+        mitigation_question,
         system_prompt=(
-            "جاوب اعتماداً على معلومات موثوقة فقط. الكتاب المذكور في السؤال "
+            "اعتمد على معلومات موثوقة فقط. الكتاب المذكور في السؤال "
             "غير معروف لي حالياً. لو مش قادر تتحقق من وجوده أو من اسم مؤلفه، "
-            "قول بوضوح: مش متأكد، وماتخترعش اسم مؤلف أو تفاصيل."
+            "قول بوضوح «مش متأكد» وماتخترعش اسم مؤلف أو تفاصيل."
         ),
         temperature=0.2,
     )
 
-    return {
-        "question": question,
+    mitigation = {
+        "question": mitigation_question,
         "before": before,
-        "before_tokens": before_usage.total_tokens,
         "after": after,
-        "after_tokens": after_usage.total_tokens,
     }
 
-
-def append_results_to_notes(temperature_rows, hallucination_rows, mitigation):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    with NOTES_FILE.open("a", encoding="utf-8") as file:
-        file.write("\n\n---\n\n")
-        file.write("# W6D2 — Temperature و Hallucination\n\n")
-        file.write(f"وقت تشغيل التجربة: {timestamp}\n\n")
-
-        file.write("## تجربة الـTemperature\n\n")
-        file.write(
-            "نفس النص ونفس طلب التلخيص اتبعتوا 3 مرات عند 0.1 و3 مرات عند 0.9. "
-            "المهم هنا إننا نبص على اختلاف الصياغة والتفاصيل، مش بس طول الرد.\n\n"
-        )
-        file.write("| الحرارة | التجربة | الرد | عدد الرموز |\n")
-        file.write("|---:|---:|---|---:|\n")
-        for row in temperature_rows:
-            compact = row["answer"].replace("\n", " ").replace("|", "\\|")
-            file.write(
-                f"| {row['temperature']} | {row['run']} | {compact} | {row['tokens']} |\n"
-            )
-
-        file.write("\n### ملاحظتي على الفرق\n\n")
-        file.write(
-            "النتيجة اللي ظهرت في التشغيل الفعلي تتسجل هنا بعد مقارنة الردود الستة. "
-            "لو الردود عند 0.1 و0.9 طلعت شبه بعض جداً، ده مش معناه إن التجربة فشلت؛ "
-            "ممكن يكون الموديل أو إعدادات الـAPI قللت الاختلاف، وساعتها أجرب موديل تاني.\n\n"
-        )
-
-        file.write("## اختبار الـHallucination\n\n")
-        file.write("| النوع | السؤال | الرد | هل هلوس؟ | إزاي اتأكدت؟ |\n")
-        file.write("|---|---|---|---|---|\n")
-        for row in hallucination_rows:
-            compact = row["answer"].replace("\n", " ").replace("|", "\\|")
-            file.write(
-                f"| {row['type']} | {row['question']} | {compact} | [يتحدد بعد التحقق] | {row['verification']} |\n"
-            )
-
-        file.write("\n### ملاحظة مهمة\n\n")
-        file.write(
-            "لو النموذج قال مش عارف أو قال إن الحاجة مش موجودة، ده مش فشل في التجربة. "
-            "بالعكس، دي نتيجة مهمة لأنها بتوضح إن الاعتراف بعدم اليقين أأمن من اختراع إجابة.\n\n"
-        )
-
-        file.write("## تجربة تقليل الهلوسة\n\n")
-        file.write(f"**السؤال:** {mitigation['question']}\n\n")
-        file.write(f"**قبل تعديل الـPrompt:**\n{mitigation['before']}\n\n")
-        file.write(f"**بعد تعديل الـPrompt:**\n{mitigation['after']}\n\n")
-        file.write(
-            "### ملاحظتي\n\n"
-            "الـPrompt المعدل بيدي للموديل مساحة يقول مش متأكد، وكمان بيديه معلومة "
-            "واضحة عن حدود السياق. لو النتيجة اتحسنت، ده بيقلل فرصة الهلوسة لكنه "
-            "مش ضمان إن الموديل عمره ما هيغلط.\n\n"
-        )
-
-        file.write("## الخلاصة\n\n")
-        file.write(
-            "أنا مش شايف إننا نقدر نلغي الهلوسة نهائياً في نظام حقيقي. اللي نقدر "
-            "نعمله هو نقللها ونكشفها قبل ما توصل للمستخدم. في نظام حقيقي هعتمد على "
-            "مصدر موثوق أو قاعدة معرفة لما السؤال محتاج حقيقة محددة، وأطلب من "
-            "الموديل يعترف بعدم اليقين بدل التخمين، وأعمل تحقق مستقل للمعلومات "
-            "المهمة، خصوصاً الحاجات الحساسة أو الحديثة. كمان مش هعتبر إن نبرة "
-            "الموديل الواثقة معناها إن الإجابة صح.\n"
-        )
-
-
-if __name__ == "__main__":
-    temperature_rows = run_temperature_test()
-    hallucination_rows = run_hallucination_test()
-    mitigation = run_hallucination_reduction_test()
-
-    append_results_to_notes(
-        temperature_rows,
-        hallucination_rows,
+    # Everything required for W6D2 is handled from this one Python file.
+    save_notes(
+        temperature_results,
+        hallucination_results,
         mitigation,
     )
 
     print("W6D2 خلص. النتائج اتضافت لـ notes.md")
+
+
+if __name__ == "__main__":
+    main()
