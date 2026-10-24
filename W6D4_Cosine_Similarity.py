@@ -12,11 +12,11 @@ MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 SENTENCES = [
     "The striker scored the winning goal in the final minute.",
-    "The forward found the net to secure victory at the end of the match.",
-    "The goalkeeper made a brilliant save to stop the penalty.",
-    "The goalkeeper blocked the spot kick with an excellent save.",
+    "A late strike secured the team's victory just before the match ended.",
+    "The goalkeeper stopped the penalty with an outstanding save.",
+    "The keeper denied the spot kick and prevented the opponent from scoring.",
     "The Python program reads data from a file and processes it.",
-    "The script loads information from a file and then transforms it.",
+    "The script loads information from a file and transforms the data.",
     "The developer fixed a bug in the authentication system.",
     "The programmer repaired an error in the login mechanism.",
     "The chef prepared a spicy chicken dish with fresh vegetables.",
