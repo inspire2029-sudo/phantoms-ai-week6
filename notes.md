@@ -281,3 +281,79 @@ The API key must never be committed to GitHub.
 - 3Blue1Brown — Dot products and duality: https://3blue1brown.com/lessons/dot-products
 - Baeldung — Cosine Similarity: https://www.baeldung.com/cs/cosine-similarity
 - KodeKloud — Three Ways to Measure Similarity: https://notes.kodekloud.com/docs/Vector-Database-for-GenAI/Vector-Similarity-Explained/Three-Ways-to-Measure-Similarity/page
+
+
+---
+
+# W6D5 — Prompt Debugging
+
+## معايير الرد الثابت قبل التجربة
+
+اعتبرت الرد ثابت لما يحقق على الأقل المعايير دي في التكرارات
+
+- نفس الـOutput Format في كل مرة
+- نفس طريقة تسمية التقييم باستخدام positive أو negative أو mixed
+- نفس أسماء الحقول في الـJSON
+- استخراج الأسماء والمنتجات من النص فقط من غير تخمين
+- سبب مختصر ومباشر قريب في الطول من باقي الردود
+
+## الـ5 Prompts المعيوبة
+
+الـ5 Prompts الأصليين موجودين جوه W6D5_Prompt_Debugging.py زي ما اتبعتوا من غير تعديل قبل تجربة الإصلاح
+
+## تشخيص المشاكل
+
+### 1 عدم وجود Output Format ثابت
+
+الـPrompt بيقول متطولش لكنه مش بيحدد شكل ثابت للرد
+وده ممكن يخلي مرة الرد يبقى جملة ومرة نقاط ومرة شكل مختلف
+
+### 2 كلمة كويس أو وحش مش محددة كـLabels ثابتة
+
+الموديل ممكن يقول إيجابي أو سلبي أو مختلط أو يستخدم تعبيرات مختلفة
+فده يعمل عدم ثبات في طريقة تسمية التقييم
+
+### 3 الأسماء والمنتجات مش محدد يتكتبوا إزاي
+
+الـPrompt بيطلب استخراجهم لكن مش محدد هل الأسماء تكون في قائمة ولا جملة ولا هل نحافظ على النص حرفيا
+وده يخلي شكل الـOutput يتغير
+
+### 4 مفيش تعليمات واضحة للمعلومة الناقصة
+
+لو مفيش اسم شخص أو منتج الموديل مش متقال له يعمل إيه
+وده ممكن يخليه يخمن أو يكتب إن المعلومة غير موجودة بأشكال مختلفة
+
+### 5 كل التعليمات محطوطة في جملة واحدة
+
+الدور والسياق والمطلوب وشكل الرد مش منفصلين بوضوح
+وده بيزود احتمالية إن جزء من المطلوب يتنفذ بشكل مختلف من محاولة للتانية
+
+## الإصلاح
+
+النسخة الجديدة قسمت الـPrompt إلى System وContext وInstruction وOutput Format
+وكمان حطت قاعدة واضحة إن الموديل يعتمد على النص فقط ولو معلومة مش موجودة يرجع قائمة فاضية بدل التخمين
+
+الـJSON المطلوب ثابت بالشكل ده
+
+{"rating":"positive|negative|mixed","reason":"سبب مختصر","names":[],"products":[]}
+
+## التجربة والقياس
+
+الكود بيشغل كل Prompt ثلاث مرات قبل الإصلاح وثلاث مرات بعد الإصلاح بنفس الـTemperature
+يعني 15 محاولة قبل و15 محاولة بعد
+
+بعد كل Response الكود بيحاول يقرأه باستخدام json.loads
+وبالتالي نقدر نقيس بشكل رقمي كام Response كان قابل للقراءة كـJSON كامل
+
+النتائج الفعلية بتتولد وقت التشغيل في W6D5_results.md ومش هنحط أرقام متخيلة في الـRepository
+
+## ليه القياس ده مهم
+
+مش كفاية إن Response واحدة شكلها حلو
+الـConsistency لازم تتقاس على تكرارات متعددة ومعايير واضحة
+وده متوافق مع فكرة إننا نحدد Success Criteria ونختبر التغييرات بشكل منهجي قبل ما نقول إن الـPrompt اتحسن
+
+## مصادر اليوم
+
+- Anthropic Prompt Engineering Overview: https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview
+- OpenAI Prompting tactics summary: https://aibusiness.com/nlp/openai-s-six-steps-to-improving-your-prompts-to-get-better-results
