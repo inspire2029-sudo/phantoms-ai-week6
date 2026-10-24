@@ -25,7 +25,7 @@ SENTENCES = [
 
 QUERY = "How can a Python program read and process information from a file?"
 
-# الحساب اليدوي المطلوب في التاسك.
+# الحساب اليدوي الـ مطلوب في التاسك.
 A = np.array([1.0, 2.0, 3.0])
 B = np.array([2.0, 1.0, 2.0])
 C = np.array([-1.0, 2.0, 1.0])
@@ -152,7 +152,7 @@ def append_notes(manual, pair_results, search_results, scaled_result):
 
         file.write(
             "اختبار الـVector الصفري رجّع 0 بدل ما يحصل قسمة على صفر، "
-            "وده السلوك اللي حطيته في الدالة بنفسي.\n\n"
+            "وده السلوك الـ حطيته في الدالة .\n\n"
         )
 
         file.write("## يعني إيه Cosine Similarity؟\n\n")
@@ -173,8 +173,8 @@ def append_notes(manual, pair_results, search_results, scaled_result):
             "لو واحد أطول بكتير.\n\n"
         )
 
-        file.write("## نتائج نفس أزواج إمبارح\n\n")
-        file.write("| الزوج | Cosine بتاعتي | Euclidean |\n")
+        file.write("## نتايج نفس أزواج إمبارح\n\n")
+        file.write("| الزوج | Cosine  | Euclidean |\n")
         file.write("|---|---:|---:|\n")
         for item in pair_results:
             file.write(
@@ -182,7 +182,7 @@ def append_notes(manual, pair_results, search_results, scaled_result):
                 f"{item['cosine']:.6f} | {item['euclidean']:.6f} |\n"
             )
 
-        file.write("\nالـCosine هنا محسوب بالدالة اللي كتبتها بنفسي، مش بدالة جاهزة.\n\n")
+        file.write("\nالـCosine هنا محسوب بالدالة الـ كتبتها ،و مش بدالة جاهزة.\n\n")
 
         file.write("## مقارنة الترتيب\n\n")
         cosine_order = sorted(pair_results, key=lambda x: x["cosine"], reverse=True)
@@ -200,8 +200,8 @@ def append_notes(manual, pair_results, search_results, scaled_result):
 
         file.write("## تجربة الحجم\n\n")
         file.write(
-            "ضربت أحد الـVectors في 10. النتيجة المتوقعة هي إن الـCosine "
-            "يفضل زي ما هو لأن الاتجاه لم يتغير، بينما الـEuclidean "
+            "ضربت واحد من الـVectors في 10. النتيجة المتوقعة هي إن الـCosine "
+            "يفضل زي ما هو لأن الاتجاه مااتغيرش ، بينما الـEuclidean "
             "يتغير لأن المسافة بين النقطتين اتغيرت.\n\n"
         )
         file.write(f"- Cosine قبل الضرب = {scaled_result['cosine_before']:.6f}\n")
@@ -295,7 +295,7 @@ def main():
 
     append_notes(manual, results, search_results, scaled_result)
 
-    print("\nW6D4 خلص. النتائج اتضافت لـ notes.md")
+    print("\nW6D4 خلص. النتايج اتضافت لـ notes.md")
 
 
 if __name__ == "__main__":
