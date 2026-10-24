@@ -212,3 +212,72 @@ The API key must never be committed to GitHub.
 - 3Blue1Brown — GPT / Word Embeddings: https://www.3blue1brown.com/lessons/gpt
 - Sentence Transformers: https://pypi.org/project/sentence-transformers/
 - Google Gemini Embeddings: https://ai.google.dev/gemini-api/docs/embeddings?hl=ar
+
+
+---
+
+# W6D4 — Cosine Similarity و Semantic Search
+
+## الحساب بإيدي
+
+استخدمت متجهات صغيرة من 3 أرقام عشان أفهم الحساب قبل ما أستخدم Embeddings حقيقية:
+
+- A = [1, 2, 3]
+- B = [2, 1, 2]
+- C = [-1, 2, 1]
+
+### الزوج A و B
+
+- Dot Product = 1×2 + 2×1 + 3×2 = **10**
+- Magnitude A = √(1² + 2² + 3²) = **3.741657**
+- Magnitude B = √(2² + 1² + 2²) = **3.000000**
+- Cosine Similarity = 10 / (3.741657 × 3) = **0.890871**
+
+### الزوج A و C
+
+- Dot Product = 1×(-1) + 2×2 + 3×1 = **6**
+- Magnitude A = **3.741657**
+- Magnitude C = √((-1)² + 2² + 1²) = **2.449490**
+- Cosine Similarity = 6 / (3.741657 × 2.449490) = **0.654654**
+
+الدالة في الملف بتتعامل مع الـVector الصفري وبتعيد **0** بدل القسمة على صفر.
+
+## يعني إيه Cosine Similarity؟
+
+الـCosine Similarity بيقيس الزاوية بين متجهين، يعني بيشوف اتجاههم قريب من بعض قد إيه. المعادلة هي Dot Product مقسوم على حاصل ضرب طول المتجهين.
+
+فلو كبرت Vector من غير ما تغير اتجاهه، الـCosine يفضل ثابت لأن الطول بيتلغي من البسط والمقام. وده مناسب للنصوص لأننا غالبًا مهتمين باتجاه المعنى في مساحة الـEmbeddings أكتر من حجم المتجه نفسه.
+
+## مقارنة Cosine و Euclidean
+
+الـCosine بيركز على الاتجاه، أما الـEuclidean فبيقيس المسافة الفعلية بين نقطتين. عشان كده الاتنين ممكن يطلعوا ترتيبات مختلفة؛ لأن كل مقياس بيسأل سؤال مختلف.
+
+الملف بيحسب الاتنين لنفس أزواج جمل إمبارح عشان نقدر نشوف الفرق في الترتيب فعليًا.
+
+## تجربة الحجم
+
+ضربت أحد الـVectors في 10. المتوقع إن الـCosine يفضل تقريبًا زي ما هو لأن الاتجاه ما اتغيرش، بينما الـEuclidean يتغير لأن نقطة الـVector اتحركت وبقى فيه فرق أكبر في الطول والمسافة.
+
+الملف بيحسب القيم قبل وبعد الضرب ويسجلها تلقائيًا وقت التشغيل.
+
+## Mini Semantic Search
+
+استخدمت السؤال:
+
+**How can a Python program read and process information from a file?**
+
+وبعدها حوّلت السؤال لـEmbedding وقارنت الـCosine بتاعه مع الـ10 جمل، ورتبتهم من الأقرب للأبعد.
+
+النتيجة المنطقية المتوقعة إن أقرب الجمل تكون الجمل الخاصة بقراءة البيانات من ملف ومعالجتها، خصوصًا الجملتين 5 و6. الملف بيطبع أقرب 3 نتائج فعلية.
+
+## مقارنة نتيجة W6D3
+
+في W6D3 استخدمنا دالة التشابه الجاهزة من sentence-transformers، أما هنا فحساب الـCosine نفسه معمول بإيدنا باستخدام NumPy فقط. المفروض النتائج تتطابق مع فرق التقريب لأننا بنحسب نفس المعادلة.
+
+لو ظهر اختلاف، الملف فيه فحص للحساب اليدوي عشان يكشف المشكلة بدل ما نعديها من غير ما نلاحظها.
+
+## مصادر اليوم
+
+- 3Blue1Brown — Dot products and duality: https://3blue1brown.com/lessons/dot-products
+- Baeldung — Cosine Similarity: https://www.baeldung.com/cs/cosine-similarity
+- KodeKloud — Three Ways to Measure Similarity: https://notes.kodekloud.com/docs/Vector-Database-for-GenAI/Vector-Similarity-Explained/Three-Ways-to-Measure-Similarity/page
